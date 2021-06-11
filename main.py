@@ -19,7 +19,7 @@ def load_key():
     file.close()
     return key
 
-# View the passwords in a list
+# View the passwords in a list from the file
 def view():
     with open('password.txt', 'r') as f:
         for line in f.readlines():
@@ -27,7 +27,7 @@ def view():
             user, passw = data.split("|")
             print("User: ", user, "| Password: ", fer.decrypt(passw.encode()).decode())
 
-# Add the passwords
+# Add the passwords to the file
 def add():
     name = input("Account Name: ")
     pwd = input("Password: ")
@@ -36,25 +36,36 @@ def add():
         f.write(name + "|" + fer.encrypt(pwd.encode()).decode() + "\n")
 
 # Ask for the main password and confirm it works with the file.
-try:
-    main_password = input("What is your main password? ").encode()
+def master_pass(x):
+    x = Fernet.generate_key()
+    with open("master.key", "wb") as master_file:
+        master_file.write(x)
 
-    salt = os.urandom(16)
-    kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
+if os.path.exists("master.key"):
+    try_master_password = input("What is your main password? ").encode()
+else:
+    master_password = input("Please set a master password: ").encode()
+    master_pass(master_password)
 
-    key = base64.urlsafe_b64encode(kdf.derive(main_password))
-    fer = Fernet(key)
+salt = os.urandom(16)
+kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
 
-    while True:
-        mode = input("Would you like to (a)dd a new password, (v)iew existing ones or (q)uit? ")
-        if mode == "q":
-            break
-        if mode == "v":
+key = base64.urlsafe_b64encode(kdf.derive(load_key()))
+fer = Fernet(key)
+
+while True:
+    mode = input("Would you like to (a)dd a new password, (v)iew existing ones or (q)uit? ").lower()
+    if mode == "q":
+        break
+    if mode == "v":
+        can_you_access = input("What is the master password? ")
+        if can_you_access == master_password:
             view()
-        elif mode == "a":
-            add()
         else:
-            print("Invalid Mode")
+            print("Sorry, that's incorrect. Try again...")
             continue
-except:
-    print("That password is invalid, please try again.")
+    elif mode == "a":
+        add()
+    else:
+        print("Invalid Mode")
+        continue
