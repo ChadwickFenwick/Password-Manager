@@ -1,0 +1,1 @@
+A simple password manager that uses cryptography.
