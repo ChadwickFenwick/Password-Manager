@@ -41,17 +41,31 @@ def master_pass(x):
     with open("master.key", "wb") as master_file:
         master_file.write(x)
 
-if os.path.exists("master.key"):
-    try_master_password = input("What is your main password? ").encode()
-else:
-    master_password = input("Please set a master password: ").encode()
-    master_pass(master_password)
+def master_return():
+    file = open("master.key", "rb")
+    master_file_open = file.read()
+    master_key_return = fer_master.decrypt(master_file_open.encode()).encode()
+    file.close()
+    return master_key_return
 
 salt = os.urandom(16)
 kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
 
 key = base64.urlsafe_b64encode(kdf.derive(load_key()))
 fer = Fernet(key)
+master_key_set = base64.urlsafe_b64encode(kdf.derive(master_return()))
+fer_master = Fernet(master_key_set)
+
+if os.path.exists("master.key"):
+    try_master_password = input("What is your master password? ").encode()
+    key_check = master_return()
+    if try_master_password == key_check:
+        password_is_valid = True
+    else:
+        password_is_valid = False
+else:
+    master_password = input("Please set a master password: ").encode()
+    master_pass(master_password)
 
 while True:
     mode = input("Would you like to (a)dd a new password, (v)iew existing ones or (q)uit? ").lower()
@@ -59,7 +73,7 @@ while True:
         break
     if mode == "v":
         can_you_access = input("What is the master password? ")
-        if can_you_access == master_password:
+        if can_you_access == password_is_valid:
             view()
         else:
             print("Sorry, that's incorrect. Try again...")
